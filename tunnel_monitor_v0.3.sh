@@ -120,7 +120,7 @@ do
 	done
 	echo -e "${NC}"
 
-	# print non-tunnel ssh sessions
+	# print all ssh sessions
 	echo -e "All SSH sessions: ${CYAN}"
 	for ((i = 0 ; i < ${#ssh_list[@]} ; i++)); do
 		echo ${ssh_list[${i}]}
