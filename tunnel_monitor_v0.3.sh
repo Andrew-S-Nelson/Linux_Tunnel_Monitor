@@ -1,6 +1,14 @@
 #!/bin/bash
+
+# Make me pretty:
+# xterm -ah -title tunnel_monitor_v0.3.sh ./tunnel_monitor_v0.3.sh
+
+# Screen file:
+ssh_status="/tmp/ssh_status"
+
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
 while [[ true ]]
 do
 	tunnel_pids=($(ss -ntlp | grep -Po "ssh\",pid=\d+,fd=5" | grep -Po "\d+," | cut -d',' -f1 | sort -u))
@@ -33,18 +41,19 @@ do
 		process=$(ps -ef | grep -P "${item}" | grep -Po "ssh .*")
 		ssh=$(echo $process | grep -Po "ssh (\w+@)?([a-zA-Z]\w+|[\d\.]+) (-p ?\d+)?")
 
+
+		# formatting for source to dest port
+		fwd_field=$(echo $process | grep -Po "\-[LR] ?\d+:([\d.]+|\w+):\d+" | cut -d" " -f2-)
+		tunnel_list[${i}]=$(echo -e "${process} - PID ${item}")
+		i=$[ $i + 1 ]
 		# grab attached ssh session
 		for ((x = 0 ; x < ${#ssh_list[@]} ; x++)); do
 			if [[ $(echo ${ssh_list[${x}]} | grep -c "PID ${item}") -ge 1 ]]; then
 				tunnel_list[${i}]="%SESSION: $(echo ${ssh_list[${x}]} | cut -d" " -f-3)"
 				ssh_list[${x}]=""
-				i=$[ $i + 1 ]
 			fi
 		done
 
-		# formatting for source to dest port
-		fwd_field=$(echo $process | grep -Po "\-[LR] ?\d+:([\d.]+|\w+):\d+" | cut -d" " -f2-)
-		tunnel_list[${i}]=$(echo -e "${process} - PID ${item}")
 		if [[ -n $fwd_field ]]; then
 			srcip="127.0.0.1"
 			srcport=$(echo ${fwd_field} | cut -d":" -f1)
@@ -137,30 +146,28 @@ do
 
 	# PRINT BLOCK
 	clear
-	echo "---------- TUNNEL MONITOR V0.3 ----------"
-	echo -e "-------- Written by LCpl Nelson ---------\n"
+	echo "-------------------- TUNNEL MONITOR V0.3 --------------------" > $ssh_status
+	echo -e "------------------ Written by LCpl Nelson -------------------\n" >> $ssh_status
 	# print tunnels
-	echo -e "Traditional Tunnels: ${CYAN}"
+	echo -e "Traditional Tunnels: ${CYAN}" >> $ssh_status
 	for ((i = 0 ; i < ${#tunnel_list[@]} ; i++)); do
-		echo ${tunnel_list[${i}]} | sed -e 's/%/\t/g'
+		echo ${tunnel_list[${i}]} | sed -e 's/%/\t/g' >> $ssh_status
 	done
-	echo -e "${NC}"
+	echo -e "${NC}" >> $ssh_status
 
 	# print master sockets and forwards
-	echo -e "Master sockets and forwards: ${CYAN}"
+	echo -e "Master sockets and forwards: ${CYAN}" >> $ssh_status
 	for ((i = 0 ; i < ${#socket_list[@]} ; i++)); do
-		echo ${socket_list[${i}]} | sed -e 's/%/\t/g'
+		echo ${socket_list[${i}]} | sed -e 's/%/\t/g' >> $ssh_status
 	done
-	echo -e "${NC}"
+	echo -e "${NC}" >> $ssh_status
 
 	# print non-tunnel ssh sessions
-	echo -e "Non-tunnel ssh sessions: ${CYAN}"
+	echo -e "Non-tunnel ssh sessions: ${CYAN}" >> $ssh_status
 	for ((i = 0 ; i < ${#nt_ssh_list[@]} ; i++)); do
-		if [[ -z ${nt_ssh_list[${i}]} ]]; then
-			continue
-		fi
-		echo ${nt_ssh_list[${i}]} | sed -e 's/%/\t/g'
+		echo ${nt_ssh_list[${i}]} | sed -e 's/%/\t/g' >> $ssh_status
 	done
-	echo -e "${NC}"
+	echo -e "${NC}" >> $ssh_status
+	cat $ssh_status
 	sleep 0.5
 done
